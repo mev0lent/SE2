@@ -1,0 +1,50 @@
+<!-- templates/index.html -->
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <title>Lecture Feedback Analysis</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  </head>
+  <body>
+    <div style="max-width: 600px; margin: 0 auto; padding-top: 50px;">
+      <h2>Lecture Feedback Analysis</h2>
+      <form id="feedbackForm">
+        <textarea name="feedback" id="feedbackInput" rows="5" style="width: 100%;" placeholder="Enter your feedback here..."></textarea><br><br>
+        <button type="submit">Analyze Feedback</button>
+      </form>
+      <div id="resultSection" style="margin-top: 30px; display: none;">
+        <h3>Analysis Result:</h3>
+        <p><strong>Kategorie:</strong> <span id="category"></span></p>
+        <p><strong>Feedback:</strong> <span id="summarizedFeedback"></span></p>
+        <p><strong>Sentiment:</strong> <span id="sentiment"></span></p>
+      </div>
+    </div>
+    <script>
+      $(document).ready(function() {
+        $("#feedbackForm").submit(function(event) {
+          event.preventDefault(); // Prevent form from refreshing the page
+          const feedback = $("#feedbackInput").val();
+
+          $.ajax({
+            url: "/analyze",
+            type: "POST",
+            contentType: "application/json",
+            data: JSON.stringify({ feedback: feedback }),
+            success: function(response) {
+              // Populate the results section
+              $("#category").text(response.category);
+              $("#summarizedFeedback").text(response.summarized_feedback);
+              $("#sentiment").text(response.sentiment);
+              $("#resultSection").show();
+            },
+            error: function() {
+              alert("An error occurred while processing your request.");
+            }
+          });
+        });
+      });
+    </script>
+  </body>
+</html>
