@@ -1,50 +1,210 @@
-<!-- templates/index.html -->
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-    <title>Lecture Feedback Analysis</title>
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-  </head>
-  <body>
-    <div style="max-width: 600px; margin: 0 auto; padding-top: 50px;">
-      <h2>Lecture Feedback Analysis</h2>
-      <form id="feedbackForm">
-        <textarea name="feedback" id="feedbackInput" rows="5" style="width: 100%;" placeholder="Enter your feedback here..."></textarea><br><br>
-        <button type="submit">Analyze Feedback</button>
-      </form>
-      <div id="resultSection" style="margin-top: 30px; display: none;">
-        <h3>Analysis Result:</h3>
-        <p><strong>Kategorie:</strong> <span id="category"></span></p>
-        <p><strong>Feedback:</strong> <span id="summarizedFeedback"></span></p>
-        <p><strong>Sentiment:</strong> <span id="sentiment"></span></p>
-      </div>
-    </div>
-    <script>
-      $(document).ready(function() {
-        $("#feedbackForm").submit(function(event) {
-          event.preventDefault(); // Prevent form from refreshing the page
-          const feedback = $("#feedbackInput").val();
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StudyVoice</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f4f4f9;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+        .container {
+            display: flex;
+            flex-direction: row;
+            width: 90%;
+            max-width: 1200px;
+            background: #fff;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+        .left-panel, .right-panel {
+            padding: 20px;
+            flex: 1;
+        }
+        .left-panel {
+            border-right: 1px solid #ddd;
+        }
+        .title {
+            margin-bottom: 20px;
+            color: #333;
+            font-size: 1.5rem;
+        }
+        .feedback-preview {
+            background: #f0f8ff;
+            border-left: 5px solid #007acc;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        .feedback-preview p {
+            margin: 0 0 10px 0;
+            font-size: 16px;
+            color: #444;
+        }
 
-          $.ajax({
-            url: "/analyze",
-            type: "POST",
-            contentType: "application/json",
-            data: JSON.stringify({ feedback: feedback }),
-            success: function(response) {
-              // Populate the results section
-              $("#category").text(response.category);
-              $("#summarizedFeedback").text(response.summarized_feedback);
-              $("#sentiment").text(response.sentiment);
-              $("#resultSection").show();
-            },
-            error: function() {
-              alert("An error occurred while processing your request.");
+        .feedback-preview ul {
+            margin: 0;
+            padding-left: 20px;
+        }
+
+        .feedback-preview li {
+            font-size: 14px;
+            color: #333;
+            margin-bottom: 5px;
+        }
+
+        .input-box textarea {
+            width: 100%;
+            height: 100px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            padding: 10px;
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
+        .buttons {
+            display: flex;
+            gap: 10px;
+        }
+        button {
+            background: #007acc;
+            color: #fff;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background: #005f99;
+        }
+        .right-panel {
+            overflow-y: auto;
+            max-height: 600px;
+        }
+        .history-item {
+            background: #e8f5e9;
+            border-left: 5px solid #4caf50;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Left Panel -->
+        <div class="left-panel">
+            <h1 class="title">StudyVoice</h1>
+
+            <!-- Feedback Preview -->
+            <div id="feedback-preview" class="feedback-preview" style="display: none;">
+                <p id="preview-text"></p>
+            </div>
+
+            <!-- Input Box -->
+            <div class="input-box">
+                <textarea id="feedback" placeholder="Enter student feedback here..."></textarea>
+            </div>
+
+            <!-- Buttons -->
+            <div class="buttons">
+                <button onclick="analyzeFeedback()">Analyse</button>
+                <button onclick="sendFeedback()">Feedback senden</button>
+            </div>
+        </div>
+
+        <!-- Right Panel -->
+        <div class="right-panel">
+            <h2>History</h2>
+            <div id="history"></div>
+        </div>
+    </div>
+
+    <script>
+        const history = [];
+
+        function analyzeFeedback() {
+            const feedback = document.getElementById("feedback").value;
+            if (!feedback.trim()) {
+                alert("Please enter feedback!");
+                return;
             }
-          });
-        });
-      });
+
+            // Send feedback to the server
+            fetch('/analyze', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ feedback })
+            })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.error) {
+                        alert(`Error: ${data.error}`);
+                        return;
+                    }
+
+                    // Format the response for the blue box
+                    const formattedResponse = `
+                        <p><strong>Kategorie:</strong> ${data.category || "N/A"}</p>
+                        <p><strong>Zusammengefasste Version des Feedbacks:</strong> ${data.summarized_feedback || "N/A"}</p>
+                        <p><strong>Sentiment-Analyse:</strong></p>
+                        <ul>
+                            ${data.sentiment.split("\n").map(line => `<li>${line}</li>`).join("")}
+                        </ul>
+                    `;
+
+                    // Display the formatted response in the blue box
+                    const feedbackPreview = document.getElementById("feedback-preview");
+                    feedbackPreview.style.display = "block";
+                    document.getElementById("preview-text").innerHTML = formattedResponse;
+                })
+                .catch(error => {
+                    console.error("Fetch error:", error);
+                    alert("An error occurred. Please check the console for details.");
+                });
+        }
+
+
+        function sendFeedback() {
+            const feedback = document.getElementById("feedback").value;
+            if (!feedback.trim()) {
+                alert("Please enter feedback to send!");
+                return;
+            }
+
+            // Add the feedback and preview text to the history
+            const previewText = document.getElementById("preview-text").textContent || "No analysis available.";
+            history.push(previewText);
+
+            // Update the history column
+            updateHistory();
+        }
+
+        function updateHistory() {
+            const historyContainer = document.getElementById("history");
+            historyContainer.innerHTML = "";
+            history.forEach((entry, index) => {
+                const item = document.createElement("div");
+                item.classList.add("history-item");
+                item.textContent = `Submission ${index + 1}:\n${entry}`;
+                historyContainer.appendChild(item);
+            });
+        }
     </script>
-  </body>
+</body>
 </html>

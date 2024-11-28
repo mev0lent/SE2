@@ -126,6 +126,8 @@ celerybeat.pid
 *.key
 *.env
 *.txt
+encryption.py
+./encryption.py
 .venv
 env/
 venv/
